@@ -12,7 +12,7 @@ opts["num_pretrain"]=128
 opts["rotate"]=False
 opts["record"] ='store_true'
 opts["video path"]='/home/meixia/Documents/论文阅读/moose/mosse-object-tracking/datasets/surfer'
-
+opts["txt_name"] = '/home/meixia/tracking_codes/mossejmx/test.txt'
 #线性化图像
 def linear_mapping(images):
     max_value = images.max()
@@ -42,43 +42,34 @@ def pre_process(img):  #原始图像resize到和高斯一样大
 
     return img
 
-def random_warp(img):
-    a = -180 / 16   #a=-11.25
-    b = 180 / 16
-    r = a + (b - a) * np.random.uniform()   #旋转角度范围是45度
-    # 从一个均匀分布[low, high)中随机采样，注意定义域是左闭右开，即包含low，不包含high.
-    # 参数介绍:
-    # low: 采样下界，float类型，默认值为0；
-    # high: 采样上界，float类型，默认值为1；
-    # size: 输出样本数目，为int或元组(tuple)
-    # 类型，例如，size = (m, n, k), 则输出m * n * k个样本，缺省时输出1个值。
-
-    # rotate（翻转） the image...
-    matrix_rot = cv2.getRotationMatrix2D((img.shape[1]/2, img.shape[0]/2), r, 1) #得到一个旋转矩阵
-    #以图片中心旋转r的角度
-    img_rot = cv2.warpAffine(np.uint8(img * 255), matrix_rot, (img.shape[1], img.shape[0])) #把原图像旋转了
-    img_rot = img_rot.astype(np.float32) / 255
-    return img_rot
+# def random_warp(img):
+#     a = -180 / 16   #a=-11.25
+#     b = 180 / 16
+#     r = a + (b - a) * np.random.uniform()   #旋转角度范围是45度
+#     # 从一个均匀分布[low, high)中随机采样，注意定义域是左闭右开，即包含low，不包含high.
+#     # 参数介绍:
+#     # low: 采样下界，float类型，默认值为0；
+#     # high: 采样上界，float类型，默认值为1；
+#     # size: 输出样本数目，为int或元组(tuple)
+#     # 类型，例如，size = (m, n, k), 则输出m * n * k个样本，缺省时输出1个值。
+#
+#     # rotate（翻转） the image...
+#     matrix_rot = cv2.getRotationMatrix2D((img.shape[1]/2, img.shape[0]/2), r, 1) #得到一个旋转矩阵
+#     #以图片中心旋转r的角度
+#     img_rot = cv2.warpAffine(np.uint8(img * 255), matrix_rot, (img.shape[1], img.shape[0])) #把原图像旋转了
+#     img_rot = img_rot.astype(np.float32) / 255
+#     return img_rot
 
 def pre_training(init_frame, G):
     height, width = G.shape
     fi = cv2.resize(init_frame, (width, height))
     #图像预处理:取log，加窗
     fi = pre_process(fi)
-
     Ai = G * np.conjugate(np.fft.fft2(fi))  # 取共轭
     Bi = np.fft.fft2(init_frame) * np.conjugate(np.fft.fft2(init_frame))
-    # for i in range(opts["num_pretrain"]):
-    #     if opts["rotate"]:
-    #         fi = pre_process(random_warp(fi))
-    #     else:
-    #         fi = pre_process(fi)
-    #     Ai = Ai + G * np.conjugate(np.fft.fft2(fi))
-    #     Bi = Bi + np.fft.fft2(fi) * np.conjugate(np.fft.fft2(fi))
-
     return Ai, Bi
 
-
+#对图像进行高斯滤波
 def get_gauss_response( img, gt):
     height, width = img.shape
     xx, yy = np.meshgrid(np.arange(width), np.arange(height))
@@ -156,9 +147,14 @@ def tracking():
             Bi = opts["the learning rate"] * (np.fft.fft2(fi) * np.conjugate(np.fft.fft2(fi))) + (1 - opts["the learning rate"]) * Bi
 
         # visualize the tracking process...
+        xx = str(pos[0]) + ',' + str(pos[1]) + ',' + str(pos[0] + pos[2]) + ',' + str(pos[1] + pos[3])
+
+        if not os.path.exists(opts["txt_name"] ):
+            os.mknod(opts["txt_name"])
+        f = open(opts["txt_name"], 'a')
+        f.write(xx + '\n')
         cv2.rectangle(current_frame, (pos[0], pos[1]), (pos[0] + pos[2], pos[1] + pos[3]), (255, 0, 0), 2)
         cv2.imshow('demo', current_frame)
         cv2.waitKey(1)
-
 
 tracking()
