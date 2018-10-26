@@ -5,38 +5,32 @@ import cv2
 import numpy as np
 import os
 
-
-
 opts = {}
-
 opts["the learning rate"]=0.125
 opts["sigma"]=100
 opts["num_pretrain"]=128
 opts["rotate"]=False
 opts["record"] ='store_true'
 opts["video path"]='/home/meixia/Documents/论文阅读/moose/mosse-object-tracking/datasets/surfer'
-    # return opts
+
+#线性化图像
 def linear_mapping(images):
-    # 线性化图像
     max_value = images.max()
     min_value = images.min()
-
     parameter_a = 1 / (max_value - min_value)
     parameter_b = 1 - max_value * parameter_a
-
     image_after_mapping = parameter_a * images + parameter_b
-
     return image_after_mapping
 
+#窗函数：汉明窗
 def window_func_2d(height, width):
     win_col = np.hanning(width)
     win_row = np.hanning(height)
     mask_col, mask_row = np.meshgrid(win_col, win_row)
-
     win = mask_col * mask_row
-
     return win
 
+#对原始图像进行预处理
 def pre_process(img):  #原始图像resize到和高斯一样大
     # get the size of the img...
     height, width = img.shape
